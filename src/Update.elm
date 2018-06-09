@@ -24,8 +24,8 @@ update msg model =
         RemoveHour day hour ->
             setHour model day hour 0 ! []
         ModuleFetch (Ok response) ->
-            update (RemoveStatus "Retrieving modules' information")
-            <| { model | modules = response } 
+            { model | modules = response } 
+            |> update (RemoveStatus "Retrieving modules' information")
         RemoveStatus status ->
             let
                 cmd = Process.sleep (Time.second)

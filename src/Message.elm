@@ -36,7 +36,7 @@ type Msg
     -- Start the optimizer
     | StartOptimise
     -- Http result from fetch course
-    | CourseFetch (Result Http.Error ModuleRecordRaw)
+    | CourseFetch (Result Http.Error RawModuleRecord)
     -- Status to remove after a small delay
     | RemoveStatus String
     -- Actual function to remove status

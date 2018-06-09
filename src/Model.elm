@@ -1,12 +1,12 @@
 module Model exposing (init, fetch)
 
 import Message exposing (Msg)
-import Array2D exposing (Array2D)
+import Array2D
 import Http
 import Autocomplete
-import Dict exposing (Dict)
+import Dict
 import Json.Decode exposing (dict, string)
-import Set exposing (Set)
+import Set
 import Types exposing (..)
 
 
@@ -16,7 +16,7 @@ initialModel =
     , modules = Dict.empty
     , search = ""
     , showDropdown = True
-    , selectedModules = (Set.insert "GER1000" Set.empty)
+    , selectedModules = Set.insert "GER1000" Set.empty
     , searchState = Autocomplete.empty
     , shortListedModules = []
     , semester = "1"

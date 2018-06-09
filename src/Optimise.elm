@@ -1,6 +1,5 @@
 module Optimise exposing (optimise, getModuleInfo, processCourseInfo)
 
-import Array2D exposing (Array2D)
 import Message exposing (Msg(..))
 import Set
 import Json.Decode exposing (string, Decoder, list)
@@ -8,16 +7,16 @@ import Json.Decode.Pipeline exposing (decode, required)
 import Http
 import Types exposing (..)
 import List.Extra
-import Array2D exposing (Array2D)
+import Array2D
 import String
-
 
 optimise : Model -> Availability -> Maybe Schedule
 optimise model availability = 
-  Debug.log "Optimized" (addModules availability model.allLessons (emptyTable availability))
+  addLessons availability model.allLessons (emptyTable availability)
+  |> Debug.log "Optimized"
 
-addModules : Availability -> AllLessons -> Schedule -> Maybe Schedule
-addModules availability lessonList scheduleSoFar =
+addLessons : Availability -> AllLessons -> Schedule -> Maybe Schedule
+addLessons availability lessonList scheduleSoFar =
   case lessonList of
     [] -> 
       Just scheduleSoFar
@@ -28,64 +27,64 @@ addModules availability lessonList scheduleSoFar =
           List.foldr
             (\class acc ->
               if acc == Nothing then 
-                (assignLessons scheduleSoFar availability class
+                assignLessons scheduleSoFar availability class
                 |> Maybe.andThen
                     (\updatedSchedule ->
-                      addModules availability t updatedSchedule
-                    ))
+                      addLessons availability t updatedSchedule
+                    )
               else
                 acc
             )
             Nothing
             choices
 
-assignLessons : Schedule -> Availability -> List ClassRecord -> Maybe Schedule
-assignLessons schedule availability lessons =
+assignLessons : Schedule -> Availability -> Group -> Maybe Schedule
+assignLessons schedule availability group =
     List.foldr
       (\lesson acc ->
         Maybe.andThen (\newSchedule -> assignLesson newSchedule availability lesson) acc
       )
       (Just schedule)
-      lessons
+      group
 
 assignLesson : Schedule -> Availability -> ClassRecord -> Maybe Schedule
-assignLesson schedule availability lesson = 
+assignLesson schedule availability class = 
     let
-      indices = List.range lesson.startIndex lesson.endIndex
-      boxes = List.map (\hour -> Array2D.get lesson.dayIndex hour schedule) indices
+      indices = List.range class.startIndex class.endIndex
+      boxes = List.map (\hour -> Array2D.get class.dayIndex hour schedule) indices
       hourAvailability =
-        (List.map 
+        List.map 
           (\lessons -> 
             case lessons of
               Nothing -> False
               Just lessons -> 
                 let
-                  results = List.map (lessonClash lesson) lessons
+                  results = List.map (lessonClash class) lessons
                 in
                   (List.all (\p -> p == False) results)
           )
-          boxes)
+          boxes
       avail = List.all (\p -> p == True) hourAvailability
     in
-      if avail == True && availabilityClash availability lesson == True then
-        addToSchedule lesson schedule
+      if avail == True && availabilityClash availability class == True then
+        addToSchedule class schedule
       else
         Nothing
 
 addToSchedule : ClassRecord -> Schedule -> Maybe Schedule
-addToSchedule lesson schedule =
+addToSchedule class schedule =
     let
-        indices = List.range lesson.startIndex lesson.endIndex
+        indices = List.range class.startIndex class.endIndex
     in
         List.foldr
         (\hour acc ->
             Maybe.andThen (\scheduleSoFar ->
                 let
-                    hourLesson = Array2D.get lesson.dayIndex hour scheduleSoFar
-                    newHour = Maybe.map (\hl -> lesson :: hl) hourLesson
+                    hourLesson = Array2D.get class.dayIndex hour scheduleSoFar
+                    newHour = Maybe.map (\hl -> class :: hl) hourLesson
                 in
                     Maybe.map 
-                      (\newH -> Array2D.set lesson.dayIndex hour newH scheduleSoFar)
+                      (\newH -> Array2D.set class.dayIndex hour newH scheduleSoFar)
                       newHour
             ) acc
         )        
@@ -126,7 +125,7 @@ emptyTable availability =
       (Array2D.columns availability)
       (\_ _ -> [])
 
-processCourseInfo : List ModuleRecordRaw -> AllLessons
+processCourseInfo : List RawModuleRecord -> AllLessons
 processCourseInfo moduleRecordRawList =
   List.map processEachCourse moduleRecordRawList
   |> List.concatMap 
@@ -196,7 +195,7 @@ endHourToIndex hour =
     Err error ->
       0
 
-processEachCourse : ModuleRecordRaw -> ModuleRecord
+processEachCourse : RawModuleRecord -> PartialModuleRecord
 processEachCourse course =
   { moduleCode = course.moduleCode
   , lessons = processLessons course.timetable }
@@ -207,7 +206,7 @@ processLessons timetableList =
     |> List.Extra.groupWhile (\x y -> x.lessonType == y.lessonType)
     |> List.map (\x -> chunk (processClasses x))
 
-chunk : List RawGroup -> RawLesson
+chunk : List RawClasses -> RawLesson
 chunk classList = 
   case classList of 
     [] -> { lessonType = "None", groups = [] }
@@ -216,7 +215,7 @@ chunk classList =
         [] -> { lessonType = "None", groups = h :: t} 
         hh :: tt -> { lessonType = hh.lessonType, groups = h :: t }
 
-processClasses : List RawClassRecord -> List RawGroup
+processClasses : List RawClassRecord -> List RawClasses
 processClasses timetableList =
   List.sortBy .classNo timetableList
   |> List.Extra.groupWhile (\x y -> x.classNo == y.classNo)
@@ -242,9 +241,9 @@ fetch semester courseCode =
   in
       Http.send CourseFetch request
 
-decodeCourse : Decoder ModuleRecordRaw
+decodeCourse : Decoder RawModuleRecord
 decodeCourse =
-  decode ModuleRecordRaw
+  decode RawModuleRecord
     |> required "ModuleCode" string
     |> required "Timetable" (list decodeTimeTable)
 
