@@ -10,9 +10,9 @@ import List.Extra
 import Array2D
 import String
 
-optimise : Model -> Availability -> Maybe Schedule
-optimise model availability = 
-  addLessons availability model.allLessons (emptyTable availability)
+optimise : AllLessons -> Availability -> Maybe Schedule
+optimise allLessons availability = 
+  addLessons availability allLessons (emptyTable availability)
   |> Debug.log "Optimized"
 
 addLessons : Availability -> AllLessons -> Schedule -> Maybe Schedule
@@ -27,7 +27,7 @@ addLessons availability lessonList scheduleSoFar =
           List.foldr
             (\class acc ->
               if acc == Nothing then 
-                assignLessons scheduleSoFar availability class
+                assignGroup scheduleSoFar availability class
                 |> Maybe.andThen
                     (\updatedSchedule ->
                       addLessons availability t updatedSchedule
@@ -38,17 +38,17 @@ addLessons availability lessonList scheduleSoFar =
             Nothing
             choices
 
-assignLessons : Schedule -> Availability -> Group -> Maybe Schedule
-assignLessons schedule availability group =
+assignGroup : Schedule -> Availability -> Group -> Maybe Schedule
+assignGroup schedule availability group =
     List.foldr
       (\lesson acc ->
-        Maybe.andThen (\newSchedule -> assignLesson newSchedule availability lesson) acc
+        Maybe.andThen (\newSchedule -> assignClass newSchedule availability lesson) acc
       )
       (Just schedule)
       group
 
-assignLesson : Schedule -> Availability -> ClassRecord -> Maybe Schedule
-assignLesson schedule availability class = 
+assignClass : Schedule -> Availability -> ClassRecord -> Maybe Schedule
+assignClass schedule availability class = 
     let
       indices = List.range class.startIndex class.endIndex
       boxes = List.map (\hour -> Array2D.get class.dayIndex hour schedule) indices
@@ -92,25 +92,25 @@ addToSchedule class schedule =
         indices
 
 availabilityClash : Availability -> ClassRecord -> Bool
-availabilityClash availability lesson =
-  List.range lesson.startIndex lesson.endIndex
+availabilityClash availability class =
+  List.range class.startIndex class.endIndex
   |> List.map
       (\hour -> 
-        Array2D.get lesson.dayIndex hour availability == Just 1
+        Array2D.get class.dayIndex hour availability == Just 1
       )
   |> List.all (\p -> p == True)
 
 lessonClash : ClassRecord -> ClassRecord -> Bool
-lessonClash lessonA lessonB =
+lessonClash classA classB =
   let
     result =
-      if lessonA.dayIndex /= lessonB.dayIndex then
+      if classA.dayIndex /= classB.dayIndex then
         False
-      else if lessonA.startTime <= lessonB.startTime &&
-              lessonA.endTime >= lessonB.startTime then
+      else if classA.startTime <= classB.startTime &&
+              classA.endTime >= classB.startTime then
         True
-      else if lessonB.startTime <= lessonA.startTime &&
-              lessonB.endTime >= lessonA.startTime then
+      else if classB.startTime <= classA.startTime &&
+              classB.endTime >= classA.startTime then
         True
       else
         False
@@ -215,7 +215,7 @@ chunk classList =
         [] -> { lessonType = "None", groups = h :: t} 
         hh :: tt -> { lessonType = hh.lessonType, groups = h :: t }
 
-processClasses : List RawClassRecord -> List RawClasses
+processClasses : RawClasses -> RawGroup
 processClasses timetableList =
   List.sortBy .classNo timetableList
   |> List.Extra.groupWhile (\x y -> x.classNo == y.classNo)

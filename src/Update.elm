@@ -39,17 +39,22 @@ update msg model =
             model ! []
         CourseFetch (Ok response) ->
             let
-                nModel = { model | moduleInfo = model.moduleInfo |> Dict.insert response.moduleCode response }
-                newModel = { nModel | 
-                            allLessons = 
-                                Dict.values nModel.moduleInfo 
-                                |> processCourseInfo }
+                nModel = { model 
+                         | moduleInfo = 
+                                model.moduleInfo 
+                                |> Dict.insert response.moduleCode response 
+                         }
+                newModel = { nModel 
+                           | allLessons = 
+                                    Dict.values nModel.moduleInfo 
+                                    |> processCourseInfo 
+                           }
                 done = Dict.size newModel.moduleInfo == Set.size newModel.selectedModules
             in
                 if done then 
                     let
                         cmd = 
-                            Task.succeed (optimise newModel model.availability)
+                            Task.succeed (optimise newModel.allLessons model.availability)
                             |> Task.perform(\result -> OptimizedResult result)
                     in
                     newModel ! [cmd]

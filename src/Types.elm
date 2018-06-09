@@ -38,8 +38,10 @@ type alias RawModuleRecord =
   , timetable : RawClasses
   }
 
+type alias RawGroup = List RawClasses
+
 type alias RawLesson =
-  { groups : List RawClasses
+  { groups : RawGroup
   , lessonType : String
   }
 
@@ -64,6 +66,8 @@ type alias Hour = Int
 type alias CourseCode = String
 type alias Description = String
 
+type alias Schedule = Array2D (List ClassRecord)
+
 type alias Model =
     { availability: Availability
     , modules : Dict CourseCode Description
@@ -77,7 +81,5 @@ type alias Model =
     , currentStatus : String
     , moduleInfo : Dict CourseCode RawModuleRecord
     , allLessons : AllLessons
-    , optimizedSchedule : Maybe (Array2D (List ClassRecord))
+    , optimizedSchedule : Maybe Schedule
     }
-
-type alias Schedule = Array2D (List ClassRecord)
