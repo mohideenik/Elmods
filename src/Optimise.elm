@@ -1,31 +1,29 @@
 module Optimise exposing (optimise, getModuleInfo, processCourseInfo)
 
 import Array2D exposing (Array2D)
-import Model exposing (Model)
 import Message exposing (Msg(..))
 import Set
 import Json.Decode exposing (string, Decoder, list)
 import Json.Decode.Pipeline exposing (decode, required)
 import Http
-import Types exposing (TimeTableRecord, CourseRecordRaw, CourseRecord, Lesson, Class, Aggregate, LessonDetails, AugTimeTableRecord)
+import Types exposing (..)
 import List.Extra
 import Array2D exposing (Array2D)
 import String
 
-type alias Schedule = Array2D (List AugTimeTableRecord)
 
-optimise : Model -> Array2D Int -> Maybe Schedule
+optimise : Model -> Availability -> Maybe Schedule
 optimise model availability = 
-  Debug.log "Optimized" (addModules availability model.processedCourseInfo (emptyTable availability))
+  Debug.log "Optimized" (addModules availability model.allLessons (emptyTable availability))
 
-addModules : Array2D Int -> Aggregate -> Schedule -> Maybe Schedule
+addModules : Availability -> AllLessons -> Schedule -> Maybe Schedule
 addModules availability lessonList scheduleSoFar =
   case lessonList of
     [] -> 
       Just scheduleSoFar
     h :: t ->
       let
-          choices = h.classes
+          choices = h.groups
       in
           List.foldr
             (\class acc ->
@@ -41,7 +39,7 @@ addModules availability lessonList scheduleSoFar =
             Nothing
             choices
 
-assignLessons : Schedule -> Array2D Int -> List AugTimeTableRecord -> Maybe Schedule
+assignLessons : Schedule -> Availability -> List ClassRecord -> Maybe Schedule
 assignLessons schedule availability lessons =
     List.foldr
       (\lesson acc ->
@@ -50,7 +48,7 @@ assignLessons schedule availability lessons =
       (Just schedule)
       lessons
 
-assignLesson : Schedule -> Array2D Int -> AugTimeTableRecord -> Maybe Schedule
+assignLesson : Schedule -> Availability -> ClassRecord -> Maybe Schedule
 assignLesson schedule availability lesson = 
     let
       indices = List.range lesson.startIndex lesson.endIndex
@@ -74,7 +72,7 @@ assignLesson schedule availability lesson =
       else
         Nothing
 
-addToSchedule : AugTimeTableRecord -> Schedule -> Maybe Schedule
+addToSchedule : ClassRecord -> Schedule -> Maybe Schedule
 addToSchedule lesson schedule =
     let
         indices = List.range lesson.startIndex lesson.endIndex
@@ -94,7 +92,7 @@ addToSchedule lesson schedule =
         (Just schedule)
         indices
 
-availabilityClash : Array2D Int -> AugTimeTableRecord -> Bool
+availabilityClash : Availability -> ClassRecord -> Bool
 availabilityClash availability lesson =
   List.range lesson.startIndex lesson.endIndex
   |> List.map
@@ -103,7 +101,7 @@ availabilityClash availability lesson =
       )
   |> List.all (\p -> p == True)
 
-lessonClash : AugTimeTableRecord -> AugTimeTableRecord -> Bool
+lessonClash : ClassRecord -> ClassRecord -> Bool
 lessonClash lessonA lessonB =
   let
     result =
@@ -121,21 +119,21 @@ lessonClash lessonA lessonB =
     result
       
 
-emptyTable : Array2D Int -> Schedule
+emptyTable : Availability -> Schedule
 emptyTable availability = 
     Array2D.initialize
       (Array2D.rows availability)
       (Array2D.columns availability)
       (\_ _ -> [])
 
-processCourseInfo : List CourseRecordRaw -> Aggregate
-processCourseInfo courseRecordRawList =
-  List.map processEachCourse courseRecordRawList
+processCourseInfo : List ModuleRecordRaw -> AllLessons
+processCourseInfo moduleRecordRawList =
+  List.map processEachCourse moduleRecordRawList
   |> List.concatMap 
     (\cr -> 
       List.map 
         (\lesson -> 
-          { classes = lesson.classes
+          { classes = lesson.groups
           , moduleCode = cr.moduleCode
           , lessonType = lesson.lessonType 
           }
@@ -146,7 +144,7 @@ processCourseInfo courseRecordRawList =
     (\lesson ->
       { lessonType = lesson.lessonType
       , moduleCode = lesson.moduleCode 
-      , classes = 
+      , groups = 
         List.map 
           (\class ->
             List.map 
@@ -198,27 +196,27 @@ endHourToIndex hour =
     Err error ->
       0
 
-processEachCourse : CourseRecordRaw -> CourseRecord
+processEachCourse : ModuleRecordRaw -> ModuleRecord
 processEachCourse course =
   { moduleCode = course.moduleCode
   , lessons = processLessons course.timetable }
 
-processLessons : List TimeTableRecord -> List Lesson
+processLessons : List RawClassRecord -> List RawLesson
 processLessons timetableList =
   List.sortBy .lessonType timetableList
     |> List.Extra.groupWhile (\x y -> x.lessonType == y.lessonType)
     |> List.map (\x -> chunk (processClasses x))
 
-chunk : List Class -> Lesson
+chunk : List RawGroup -> RawLesson
 chunk classList = 
   case classList of 
-    [] -> { lessonType = "None", classes = [] }
+    [] -> { lessonType = "None", groups = [] }
     h :: t -> 
       case h of 
-        [] -> { lessonType = "None", classes = h :: t} 
-        hh :: tt -> { lessonType = hh.lessonType, classes = h :: t }
+        [] -> { lessonType = "None", groups = h :: t} 
+        hh :: tt -> { lessonType = hh.lessonType, groups = h :: t }
 
-processClasses : List TimeTableRecord -> List Class
+processClasses : List RawClassRecord -> List RawGroup
 processClasses timetableList =
   List.sortBy .classNo timetableList
   |> List.Extra.groupWhile (\x y -> x.classNo == y.classNo)
@@ -244,15 +242,15 @@ fetch semester courseCode =
   in
       Http.send CourseFetch request
 
-decodeCourse : Decoder CourseRecordRaw
+decodeCourse : Decoder ModuleRecordRaw
 decodeCourse =
-  decode CourseRecordRaw
+  decode ModuleRecordRaw
     |> required "ModuleCode" string
     |> required "Timetable" (list decodeTimeTable)
 
-decodeTimeTable : Decoder TimeTableRecord
+decodeTimeTable : Decoder RawClassRecord
 decodeTimeTable = 
-  decode TimeTableRecord
+  decode RawClassRecord
     |> required "ClassNo" string
     |> required "LessonType" string
     |> required "WeekText" string

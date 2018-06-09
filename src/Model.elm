@@ -1,4 +1,4 @@
-module Model exposing (Model, fetch, init, Day, Hour, CourseCode, Description)
+module Model exposing (init, fetch)
 
 import Message exposing (Msg)
 import Array2D exposing (Array2D)
@@ -7,28 +7,8 @@ import Autocomplete
 import Dict exposing (Dict)
 import Json.Decode exposing (dict, string)
 import Set exposing (Set)
-import Types exposing (CourseRecordRaw, CourseRecord, Aggregate, TimeTableRecord, AugTimeTableRecord)
+import Types exposing (..)
 
-type alias Day = Int
-type alias Hour = Int
-type alias CourseCode = String
-type alias Description = String
-
-type alias Model =
-    { availability: Array2D Int
-    , modules : Dict CourseCode Description
-    , search : String
-    , showDropdown: Bool
-    , selectedModules : Set CourseCode
-    , searchState : Autocomplete.State
-    , shortListedModules : List CourseCode
-    , semester : String
-    , status : Set String
-    , currentStatus : String
-    , courseInfo : Dict String CourseRecordRaw
-    , processedCourseInfo : Aggregate
-    , optimizedSchedule : Maybe (Array2D (List AugTimeTableRecord))
-    }
 
 initialModel : Model
 initialModel = 
@@ -42,8 +22,8 @@ initialModel =
     , semester = "1"
     , status = Set.empty
     , currentStatus = "Retrieving modules' information"
-    , courseInfo = Dict.empty
-    , processedCourseInfo = []
+    , moduleInfo = Dict.empty
+    , allLessons = []
     , optimizedSchedule = Nothing
     }
 

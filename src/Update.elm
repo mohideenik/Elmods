@@ -1,7 +1,8 @@
 module Update exposing (update)
 
 import Message exposing (Msg(..))
-import Model exposing (Model, fetch)
+import Model exposing (fetch)
+import Types exposing (..)
 import Array2D
 import Set
 import Autocomplete
@@ -38,12 +39,12 @@ update msg model =
             model ! []
         CourseFetch (Ok response) ->
             let
-                nModel = { model | courseInfo = model.courseInfo |> Dict.insert response.moduleCode response }
+                nModel = { model | moduleInfo = model.moduleInfo |> Dict.insert response.moduleCode response }
                 newModel = { nModel | 
-                            processedCourseInfo = 
-                                Dict.values nModel.courseInfo 
+                            allLessons = 
+                                Dict.values nModel.moduleInfo 
                                 |> processCourseInfo }
-                done = Dict.size newModel.courseInfo == Set.size newModel.selectedModules
+                done = Dict.size newModel.moduleInfo == Set.size newModel.selectedModules
             in
                 if done then 
                     let
@@ -105,7 +106,7 @@ update msg model =
                     Just newMsg ->
                         update newMsg newModel
         StartOptimise ->
-            { model | courseInfo = Dict.empty } |> getModuleInfo
+            { model | moduleInfo = Dict.empty } |> getModuleInfo
 
 addStatus : Model -> String -> Model
 addStatus model newStatus =

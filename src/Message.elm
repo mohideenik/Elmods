@@ -3,7 +3,7 @@ module Message exposing (Msg(..))
 import Http
 import Dict exposing (Dict)
 import Autocomplete
-import Types exposing (CourseRecordRaw, TimeTableRecord, AugTimeTableRecord)
+import Types exposing (..)
 import Array2D exposing (Array2D)
 
 type Msg
@@ -36,12 +36,12 @@ type Msg
     -- Start the optimizer
     | StartOptimise
     -- Http result from fetch course
-    | CourseFetch (Result Http.Error CourseRecordRaw)
+    | CourseFetch (Result Http.Error ModuleRecordRaw)
     -- Status to remove after a small delay
     | RemoveStatus String
     -- Actual function to remove status
     | HideStatus String
     -- Result from the optimizer
-    | OptimizedResult (Maybe (Array2D (List AugTimeTableRecord)))
+    | OptimizedResult (Maybe (Array2D (List ClassRecord)))
 
     

@@ -1,6 +1,13 @@
-module Types exposing (CourseRecord, TimeTableRecord, CourseRecordRaw, Lesson, Class, Aggregate, LessonDetails, AugTimeTableRecord)
+module Types exposing (..)
 
-type alias TimeTableRecord =
+import Array2D exposing (Array2D)
+import Dict exposing (Dict)
+import Set exposing (Set)
+import Autocomplete
+
+type alias Availability = Array2D Int
+
+type alias RawClassRecord =
   { classNo : String
   , lessonType : String
   , weekText : String
@@ -10,7 +17,7 @@ type alias TimeTableRecord =
   , venue : String
   } 
 
-type alias AugTimeTableRecord =
+type alias ClassRecord =
   { classNo : String
   , lessonType : String
   , weekText : String
@@ -24,29 +31,51 @@ type alias AugTimeTableRecord =
   , dayIndex : Int
   } 
 
-type alias CourseRecordRaw = 
-  { moduleCode : String
-  , timetable : List TimeTableRecord
-  }
-  
-type alias Class = List TimeTableRecord
+type alias RawGroup = List RawClassRecord
 
-type alias Lesson =
-  { classes : List Class
+type alias ModuleRecordRaw = 
+  { moduleCode : String
+  , timetable : List RawClassRecord
+  }
+
+type alias RawLesson =
+  { groups : List RawGroup
   , lessonType : String
   }
 
-type alias CourseRecord = 
+type alias ModuleRecord = 
   { moduleCode : String
-  , lessons : List Lesson
+  , lessons : List RawLesson
   }
 
 type alias LessonDetails =
-  { classes : List (List AugTimeTableRecord)
+  { groups : List (List ClassRecord)
   , lessonType : String
   , moduleCode : String
   }
 
-
-type alias Aggregate =
+type alias AllLessons =
   List LessonDetails
+
+type alias Day = Int
+type alias Hour = Int
+type alias CourseCode = String
+type alias Description = String
+
+type alias Model =
+    { availability: Availability
+    , modules : Dict CourseCode Description
+    , search : String
+    , showDropdown: Bool
+    , selectedModules : Set CourseCode
+    , searchState : Autocomplete.State
+    , shortListedModules : List CourseCode
+    , semester : String
+    , status : Set String
+    , currentStatus : String
+    , moduleInfo : Dict String ModuleRecordRaw
+    , allLessons : AllLessons
+    , optimizedSchedule : Maybe (Array2D (List ClassRecord))
+    }
+
+type alias Schedule = Array2D (List ClassRecord)
