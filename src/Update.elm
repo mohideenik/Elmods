@@ -65,7 +65,8 @@ update msg model =
             { model 
             | optimizedSchedule = result
             , url = Maybe.andThen (getShareUrl model.semester) result 
-            , showFinalScreen = True } ! []
+            , showFinalScreen = True } 
+            |> update (RemoveStatus "Finding the perfect timetable for you.")
         HideFinalScreen ->
             { model | showFinalScreen = False } ! []
         CourseFetch (Err error) ->
@@ -117,7 +118,7 @@ update msg model =
                     Just newMsg ->
                         update newMsg newModel
         StartOptimise ->
-            { model | moduleInfo = Dict.empty } |> getModuleInfo
+            ({ model | moduleInfo = Dict.empty } |> addStatus) "Finding the perfect timetable for you." |> getModuleInfo
 
 addStatus : Model -> String -> Model
 addStatus model newStatus =
