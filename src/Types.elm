@@ -81,5 +81,7 @@ type alias Model =
     , currentStatus : String
     , moduleInfo : Dict CourseCode RawModuleRecord
     , allLessons : AllLessons
+    , url : Maybe String
+    , showFinalScreen : Bool
     , optimizedSchedule : Maybe Schedule
     }

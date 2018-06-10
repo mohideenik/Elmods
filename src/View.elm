@@ -7,15 +7,17 @@ import Html exposing (Html
                       , text
                       , table
                       , h2
+                      , p
                       , tr
                       , td
                       , input
                       , select
                       , option
                       , i
+                      , a
                       , button)
 import Html.Events exposing (onClick, onInput, onBlur, onFocus)
-import Html.Attributes exposing (class, id, colspan, placeholder, value, classList)
+import Html.Attributes exposing (class, id, colspan, placeholder, value, classList, href, target)
 import List exposing (range, map)
 import Array2D
 import Set
@@ -28,7 +30,35 @@ view model =
         [ div [  id "main-ctr",  class "col-12 shadow" ] 
               [  h2 [] [text "Your Schedule"]
               ,  mainTable model
+              ,  finalScreen model
               ,  showStatus model ] ]
+
+finalScreen : Model -> Html Msg
+finalScreen model =
+  if model.showFinalScreen then
+    div [ id "final-screen" ] 
+        [ table []
+                [ tr []
+                    [ 
+                      case model.url of
+                        Nothing -> 
+                          td []
+                              [ h2 [] [ text "Impossible." ]
+                              , p  [] [ text "Elmods wasn't able to find a non-clashing time-table for you." ]
+                              , button [ class "btn btn-optimize" , onClick HideFinalScreen ] [ text "Go Back" ] 
+                              ] 
+                        url ->
+                          td [] 
+                              [ h2 [] [ text "I've figured it out." ]
+                              , p  [] [ a [ href (Maybe.withDefault "Impossible" model.url), target "_blank" ] [ text "Click here" ]
+                                      , text " to view your timetable on NUSMods." ]
+                              , button [ class "btn btn-optimize" , onClick HideFinalScreen ] [ text "Go Back" ] 
+                              ] 
+                    ] 
+                ] 
+        ]
+  else
+    div [] []
             
 -- Show the status if any
 showStatus : Model -> Html Msg

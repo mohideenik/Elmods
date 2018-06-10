@@ -12,6 +12,7 @@ import Process
 import Time
 import Task
 import Optimise exposing (optimise, getModuleInfo, processCourseInfo)
+import NusMods exposing (getShareUrl)
 
 -- Function to process messages and return an updated model
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -61,7 +62,12 @@ update msg model =
                 else
                     newModel ! []
         OptimizedResult result ->
-            { model | optimizedSchedule = result } ! []
+            { model 
+            | optimizedSchedule = result
+            , url = Maybe.andThen (getShareUrl model.semester) result 
+            , showFinalScreen = True } ! []
+        HideFinalScreen ->
+            { model | showFinalScreen = False } ! []
         CourseFetch (Err error) ->
             model ! []
         BlankDropdown ->

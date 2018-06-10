@@ -43,5 +43,6 @@ type Msg
     | HideStatus String
     -- Result from the optimizer
     | OptimizedResult (Maybe (Array2D (List ClassRecord)))
+    | HideFinalScreen
 
     

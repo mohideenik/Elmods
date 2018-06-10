@@ -22,7 +22,8 @@ import Subscriptions exposing (subscriptions)
 
     TODO
     ====
-    1.  On the loading/splash screen, show things like:
+    1.  On the loading/splash screen, show things like: 
+        (Cancelled since optimization is really fast)
             - Making sure that you abide by the honour code...
             - Checking if your CAP is positive...
             - Measuring the correlation of CAP with real-world performance...

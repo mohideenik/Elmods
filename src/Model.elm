@@ -31,7 +31,9 @@ initialModel =
     , currentStatus = "Retrieving modules' information"
     , moduleInfo = Dict.empty
     , allLessons = []
+    , url = Nothing
     , optimizedSchedule = Nothing
+    , showFinalScreen = False
     }
 
 -- Fetch data for semester 1
