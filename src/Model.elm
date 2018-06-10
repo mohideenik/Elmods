@@ -39,7 +39,7 @@ fetch : Model -> Cmd Msg
 fetch model =
     let
         apiUrl =
-            "http://api.nusmods.com/2017-2018/" ++ model.semester ++ "/moduleList.json"
+            "https://api.nusmods.com/2017-2018/" ++ model.semester ++ "/moduleList.json"
         request =
             Http.get apiUrl (dict string)
     in
