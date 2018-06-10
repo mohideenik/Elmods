@@ -12,11 +12,18 @@ import Types exposing (..)
 
 initialModel : Model
 initialModel = 
-    { availability = Array2D.initialize 5 10 (\_ _ -> 0)
+    { availability =
+        Array2D.fromList [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 0, 0, 0, 0]
+        ]
     , modules = Dict.empty
     , search = ""
     , showDropdown = True
-    , selectedModules = Set.insert "GER1000" Set.empty
+    , selectedModules = Set.insert "CS2040" Set.empty
     , searchState = Autocomplete.empty
     , shortListedModules = []
     , semester = "1"

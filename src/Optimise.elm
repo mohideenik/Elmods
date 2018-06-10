@@ -9,11 +9,17 @@ import Types exposing (..)
 import List.Extra
 import Array2D
 import String
+import NusMods exposing (getShareUrl)
 
-optimise : AllLessons -> Availability -> Maybe Schedule
-optimise allLessons availability = 
-  addLessons availability allLessons (emptyTable availability)
-  |> Debug.log "Optimized"
+optimise : String -> AllLessons -> Availability -> Maybe Schedule
+optimise semester allLessons availability = 
+  let
+    optimized = addLessons availability allLessons (emptyTable availability)
+                |> Debug.log "Optimized"
+    url = Debug.log "Share URL" (Maybe.withDefault "Optimization not possible" (Maybe.andThen (getShareUrl semester) optimized))
+  in
+    optimized
+      
 
 addLessons : Availability -> AllLessons -> Schedule -> Maybe Schedule
 addLessons availability lessonList scheduleSoFar =

@@ -54,7 +54,7 @@ update msg model =
                 if done then 
                     let
                         cmd = 
-                            Task.succeed (optimise newModel.allLessons model.availability)
+                            Task.succeed (optimise newModel.semester newModel.allLessons model.availability)
                             |> Task.perform(\result -> OptimizedResult result)
                     in
                     newModel ! [cmd]
