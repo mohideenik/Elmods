@@ -29,15 +29,17 @@ update msg model =
             |> update (RemoveStatus "Retrieving modules' information")
         RemoveStatus status ->
             let
-                cmd = Process.sleep (Time.second)
-                |> Task.perform (\_ -> HideStatus status)
+                cmd = 
+                    Process.sleep (Time.second)
+                    |> Task.perform (\_ -> HideStatus status)
             in
                 model ! [ cmd ]
         HideStatus status ->
-            ({ model | status = Set.remove status model.status} 
-            |> updateStatus) ! []
+            ( { model | status = Set.remove status model.status} 
+              |> updateStatus
+            ) ! []
         ModuleFetch (Err error) ->
-            model ! []
+            update NoOp model
         CourseFetch (Ok response) ->
             let
                 nModel = { model 
@@ -55,8 +57,9 @@ update msg model =
                 if done then 
                     let
                         cmd = 
-                            Task.succeed (optimise newModel.semester newModel.allLessons model.availability)
-                            |> Task.perform(\result -> OptimizedResult result)
+                            Task.succeed 
+                                (optimise newModel.semester newModel.allLessons model.availability)
+                            |> Task.perform (\result -> OptimizedResult result)
                     in
                     newModel ! [cmd]
                 else
@@ -70,7 +73,7 @@ update msg model =
         HideFinalScreen ->
             { model | showFinalScreen = False } ! []
         CourseFetch (Err error) ->
-            model ! []
+            update NoOp model
         BlankDropdown ->
             { model | shortListedModules = [] } ! []
         UnblankDropdown ->
@@ -81,22 +84,19 @@ update msg model =
                     Process.sleep (Time.millisecond * 300) 
                     |> Task.perform (\_ -> BlankDropdown)
             in
-                (model, cmd)
+                model ! [ cmd ]
         ChangeSearch search ->
-            updateSearch model search ! []
+            updateSearch search model ! []
         Delete courseCode ->
             { model | selectedModules = Set.remove courseCode model.selectedModules } ! []
         ChangeSemester value ->
             let
                 newModel = { model | semester = value, selectedModules = Set.empty } 
             in
-                (newModel |> addStatus) "Retrieving modules' information" ! [ fetch newModel ]
+                (newModel |> addStatus "Retrieving modules' information") ! [ fetch newModel ]
         AddCourse id ->
-            let
-                newModel = 
-                    addCourse model id
-            in
-                update ResetSearch newModel
+            addCourse model id
+            |> update ResetSearch
         ResetSearch ->
             { model | searchState = Autocomplete.reset updateConfig model.searchState
                     , search = ""
@@ -112,36 +112,37 @@ update msg model =
                         model.shortListedModules
                 newModel = {model | searchState = newState }
             in
-                case maybeMsg of
-                    Nothing ->
-                        newModel ! []
-                    Just newMsg ->
-                        update newMsg newModel
+                maybeMsg
+                |> Maybe.map (\newMsg -> update newMsg newModel) 
+                |> Maybe.withDefault (newModel ! [])
         StartOptimise ->
-            ({ model | moduleInfo = Dict.empty } |> addStatus) "Finding the perfect timetable for you." |> getModuleInfo
+            if Set.size model.selectedModules > 0 then
+                { model | moduleInfo = Dict.empty } 
+                |> addStatus "Finding the perfect timetable for you." 
+                |> getModuleInfo
+            else
+                model ! []
 
-addStatus : Model -> String -> Model
-addStatus model newStatus =
+-- Add a status to the UI; shows any status if there are more than one
+addStatus : String -> Model -> Model
+addStatus newStatus model =
     { model | status = Set.insert newStatus model.status }
     |> updateStatus
 
+-- Shows a status if there is one
 updateStatus : Model -> Model
 updateStatus model =
     if Set.isEmpty model.status then
         { model | currentStatus = "" }
+    else if Set.member model.currentStatus model.status then
+        model
     else
-        if Set.member model.currentStatus model.status then
-            model
-        else
-            let 
-                nextStatus = Set.toList model.status |> List.head
-            in
-                case nextStatus of
-                    Just elem ->
-                        { model | currentStatus = elem }
-                    Nothing ->
-                        { model | currentStatus = "" }
+        let 
+            nextStatus = Set.toList model.status |> List.head
+        in
+            { model | currentStatus = Maybe.withDefault "" nextStatus }
 
+-- Configuration for the autocomplete plugin; used in the `updateSearch` function
 updateConfig : Autocomplete.UpdateConfig Msg String
 updateConfig =
     Autocomplete.updateConfig
@@ -163,8 +164,9 @@ updateConfig =
         , separateSelections = False
         }
 
-updateSearch : Model -> String -> Model
-updateSearch model search =
+-- Trigger the autocomplete plugin to re-render the updated dropdown
+updateSearch : String -> Model -> Model
+updateSearch search model =
     { model | search = search
             , searchState = 
                 Autocomplete.resetToFirstItem 
@@ -174,6 +176,7 @@ updateSearch model search =
                     model.searchState
             , shortListedModules = acceptableCourses search model }
 
+-- Filters the modules list using the given search query
 acceptableCourses : String -> Model -> List String
 acceptableCourses search model =
     if  String.length search > 0 then
@@ -183,7 +186,8 @@ acceptableCourses search model =
                     term = toLower search
                     value = toLower v
                 in
-                    (key |> contains term) || (value |> contains term)) 
+                    (key |> contains term) || 
+                    (value |> contains term)) 
                 model.modules)
     else
         []
@@ -196,9 +200,8 @@ setHour model day hour x =
     in
         { model | availability = updatedArray }
 
+-- Adds a given course to the selectedModules Set
 addCourse : Model -> String -> Model
 addCourse model courseCode =
-    let 
-        newModel = { model | selectedModules = Set.insert courseCode model.selectedModules }
-    in 
-        updateSearch newModel ""
+    { model | selectedModules = Set.insert courseCode model.selectedModules }
+    |> updateSearch "" 

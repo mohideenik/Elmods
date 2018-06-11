@@ -13,7 +13,7 @@ import String
 optimise : String -> AllLessons -> Availability -> Maybe Schedule
 optimise semester allLessons availability = 
     addLessons availability allLessons (emptyTable availability)
-                |> Debug.log "Optimized"
+    |> Debug.log "Optimized"
       
 
 addLessons : Availability -> AllLessons -> Schedule -> Maybe Schedule
@@ -55,14 +55,15 @@ assignClass schedule availability class =
       boxes = List.map (\hour -> Array2D.get class.dayIndex hour schedule) indices
       hourAvailability =
         List.map 
-          (\lessons -> 
-            case lessons of
-              Nothing -> False
-              Just lessons -> 
-                let
-                  results = List.map (lessonClash class) lessons
-                in
-                  (List.all (\p -> p == False) results)
+          (\assignedLessons -> 
+            assignedLessons
+            |> Maybe.map 
+                (\lessons -> 
+                  lessons
+                  |> List.map (lessonClash class) 
+                  |> List.all (\p -> p == False)
+                )
+            |> Maybe.withDefault False
           )
           boxes
       avail = List.all (\p -> p == True) hourAvailability
@@ -79,15 +80,13 @@ addToSchedule class schedule =
     in
         List.foldr
         (\hour acc ->
-            Maybe.andThen (\scheduleSoFar ->
-                let
-                    hourLesson = Array2D.get class.dayIndex hour scheduleSoFar
-                    newHour = Maybe.map (\hl -> class :: hl) hourLesson
-                in
-                    Maybe.map 
-                      (\newH -> Array2D.set class.dayIndex hour newH scheduleSoFar)
-                      newHour
-            ) acc
+            Maybe.andThen 
+              (\scheduleSoFar ->
+                  Array2D.get class.dayIndex hour scheduleSoFar
+                  |> Maybe.map ((::) class)
+                  |> Maybe.map (\newH -> Array2D.set class.dayIndex hour newH scheduleSoFar)
+              ) 
+              acc
         )        
         (Just schedule)
         indices
