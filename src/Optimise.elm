@@ -231,7 +231,7 @@ fetch : String -> String -> Cmd Msg
 fetch semester courseCode =
   let
       apiUrl = 
-            "https://api.nusmods.com/2017-2018/" 
+            "https://api.nusmods.com/2018-2019/" 
             ++ semester 
             ++ "/modules/" 
             ++ courseCode 
